@@ -17,13 +17,10 @@
   <body>
     <h1>Encryption REST API service lives here</h1>
     <p>Place your text to be encrypted here</p>
-    <div class="input-group">
-      <input class="form-control width100" name="plain">
-      <span class="input-group-btn">
-        <button class="btn btn-info" type="submit" value="submit">Send</button>
-        <input type="submit" value="Submit" formamethod="POST">
-      </span>
-    <div>
+      <!--<button class="btn btn-info" type="submit" value="submit">Send</button>-->
+      <input type="text" id="plain" name="plain" value="Text to be encrypted" formamethod="POST">
+      <form method="POST" action="/" enctype="multipart-form-data">
+      <input type="submit" value="Submit" title="Submits plain text from input to encryption service">
     <div class="footer">
       <p>Author: Milo2, None rights reserved 2021</p>
     </div>

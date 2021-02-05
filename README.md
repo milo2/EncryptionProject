@@ -42,7 +42,7 @@ LOW LEVEL REQ:
 #USAGE
 Use web browser or user command line tool to access the service and push text to be encrypted.
 - Run locally by command ```pipenv run python service.py```
-- Run in docker by command ```docker run --rm -it -p 5000:5000 encryption_service```
+- Run in docker by command ```docker run --rm -it -p 8080:8080 encryption_service```
 
 
 #PERFORMANCE TEST

@@ -13,15 +13,14 @@ import os.path
 # For intercommunication
 import signal
 # For support JSON format
-import json
 import base64
 # For access to environment variables
 from os import environ as env
 # For REST API
 from flask import Flask, request
 #
-from Crypto.Cipher import AES
 from cryptography.fernet import Fernet
+from Crypto.Cipher import AES
 # For key generation from password
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import scrypt
@@ -41,7 +40,8 @@ def terminate_by_signal(signal_number, frame):
     """
     Trigger a sequence for program termination.
     """
-    logging.info("Terminate signal received")
+    logging.info("Signal %d received in process %s, terminating." \
+        , signal_number, frame)
     global IS_RUNNING  # pylint: disable=W0603
     IS_RUNNING = False
 
@@ -52,14 +52,16 @@ def get_env():
     """
     try:
         return {'AES_KEY': env.get('AES_KEY', None)
-                ,'VERBOSITY':env.get('VERBOSITY', 'INFO')
+                ,'VERBOSITY': env.get('VERBOSITY', 'INFO')
+                ,'PORT': env.get('PORT', '8080')
+                ,'SSL': env.get('SSL', 'NONE')
                 }
     except KeyError:
         logging.info("Mandatory environment variable(s) missing")
         raise
 
 
-class Encryption_key:
+class EncryptionKey:
     """
     Class to handle loading and generation of the encryption key
     """
@@ -69,6 +71,7 @@ class Encryption_key:
         Class constructor
         """
         self.key = None
+        self.salt = None
 
         if self.key is None:
             self.key = self.__load_key__()
@@ -128,10 +131,14 @@ class Encryption_key:
         """
         Validate given key
         """
-        pass
-
+        valid = 0
         # Key could be validated here - minimum required bit length, etc.
-        return 1
+        if key is not None and len(key) > 0:
+            valid = 1
+        else:
+            valid = 0
+
+        return valid
 
     def get_key(self):
         """
@@ -154,7 +161,8 @@ def encrypt_message(key, plain_text:bytearray=None, add:bytearray=None, nonce=No
     """
     logging.debug("plain_text is %s data type", type(plain_text))
 
-    if type(plain_text) is str:
+    #if type(plain_text) is str:
+    if isinstance(plain_text, str):
         logging.debug("Converting plain_text to bytearray data type")
         plain_text = bytearray(plain_text, 'utf8')
 
@@ -176,7 +184,7 @@ def welcome_msg():
     """
     Generate welcome message of the service
     """
-    print("Welcome to the microservice to encrypt data")
+    print("\nWelcome to the microservice to encrypt data\n")
 
 
 # Define respose to GET access to the service
@@ -212,7 +220,7 @@ def receive_data():
     if data is not None and len(data) > 0:
         logging.debug("Data to be encrypted: '%s'", data)
 
-        key_class = Encryption_key(password=env_vars['AES_KEY'])
+        key_class = EncryptionKey(password=env_vars['AES_KEY'])
         encrypted_message = encrypt_message(key_class.get_key(), data)
         logging.debug("Encrypted message: '%s'", encrypted_message)
 
@@ -257,7 +265,7 @@ def receive_file():
     if file is not None and len(file) > 0:
         logging.debug("File to be encrypted: '%s'", file)
 
-        key_class = Encryption_key(password=env_vars['AES_KEY'])
+        key_class = EncryptionKey(password=env_vars['AES_KEY'])
         encrypted_message = encrypt_message(key_class.get_key(), file)
         logging.debug("Encrypted message: '%s'", encrypted_message)
 
@@ -274,8 +282,6 @@ def receive_file():
 
 
 if __name__ == "__main__":
-    welcome_msg()
-
     # Capture signal from the outside
     signal.signal(signal.SIGTERM, terminate_by_signal)
 
@@ -283,25 +289,33 @@ if __name__ == "__main__":
     env_vars = get_env()
     print("Logging level is set to:", env_vars.get('VERBOSITY'))
 
+    port = int(env_vars.get('PORT'))
+    print("REST API source port:", env_vars.get('PORT'))
+
+    ssl = env_vars.get('SSL')
+    print("SSL support is set to:", env_vars.get('SSL'))
+
     # Update logger configuration based on ENV variable value
     logger.setLevel(env_vars.get('VERBOSITY', 'DEBUG'))
 
+    welcome_msg()
 
-    plain_text = "My test string to be encrypted"
+    PLAIN_TEXT = "My test string to be encrypted"
     logger.debug("Environment variable AES_KEY: '%s'", env_vars['AES_KEY'])
-    logger.debug("Text to be encrypted: '%s'", plain_text)
+    logger.debug("Text to be encrypted: '%s'", PLAIN_TEXT)
 
-    key_class = Encryption_key(password=env_vars['AES_KEY'])
-    encrypted_text = encrypt_message(key_class.get_key(), plain_text)
+    key_class = EncryptionKey(password=env_vars['AES_KEY'])
+    encrypted_text = encrypt_message(key_class.get_key(), PLAIN_TEXT)
     logging.debug("Encrypted text: '%s'", encrypted_text)
 
     # Use Flash without SSL
-    app.run(host="0.0.0.0")
-
-    # Use Flask with adhoc certificate
-    #app.run(host="0.0.0.0", ssl_context='adhoc')
-
-    # To run Flask with self-signed SSL cert
-    #app.run(host="0.0.0.0", ssl_context=('cert/cert.pem', 'cert/key.pem'))
+    if env_vars.get('SSL') == "NONE":
+        app.run(host="0.0.0.0", port=port)
+    elif env_vars.get('SSL') == "ADHOC":
+        # Use Flask with adhoc certificate
+        app.run(host="0.0.0.0", ssl_context='adhoc', port=port)
+    elif env_vars.get('SSL') == "CERTIFICATE":
+        # To run Flask with self-signed SSL cert
+        app.run(host="0.0.0.0", ssl_context=('cert/cert.pem', 'cert/key.pem'), port=port)
 
     sys.exit()
