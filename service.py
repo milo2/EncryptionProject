@@ -15,7 +15,7 @@ import signal
 # For support JSON format
 import json
 import base64
-# For access to environmental variables
+# For access to environment variables
 from os import environ as env
 # For REST API
 from flask import Flask, request
@@ -31,10 +31,11 @@ app = Flask(__name__)
 app.config["DEBUG"] = True
 IS_RUNNING = True
 
+# Configure logging service
 logging.basicConfig(format='%(asctime)s   %(message)s', datefmt='%I:%M:%S %p', \
-    stream=sys.stdout, level=logging.DEBUG)
+    stream=sys.stdout, level=logging.WARNING)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
 
 def terminate_by_signal(signal_number, frame):
     """
@@ -47,14 +48,14 @@ def terminate_by_signal(signal_number, frame):
 
 def get_env():
     """
-    Return configuration items from the environmental variables or fail
+    Return configuration items from the environment variables or fail
     """
     try:
         return {'AES_KEY': env.get('AES_KEY', None)
-                ,'verbosity':env.get('VERBOSITY', 'INFO')
+                ,'VERBOSITY':env.get('VERBOSITY', 'INFO')
                 }
     except KeyError:
-        logging.info("Mandatory environmental variables missing")
+        logging.info("Mandatory environment variable(s) missing")
         raise
 
 
@@ -177,28 +178,21 @@ def welcome_msg():
     """
     print("Welcome to the microservice to encrypt data")
 
+
 # Define respose to GET access to the service
 @app.route("/", methods=["GET"])
 def get_request():
     """
     Method to implement REST API call of GET
     """
-    html_content = ""
-    html_content += "<html><body>"
-    html_content += "<h1>Encryption REST API service lives here</h1>"
-    html_content += "Place your plain text message here<br>"
-    html_content += '<label for="plain">Plain text: </label>'
-    html_content += '<input type="text" id="plain" name="plain"><br><br>'
-    html_content += '<form method="POST" action="/" enctype="multipart-form-data">'
-    html_content += '<input type="submit" value="submit" \
-        title="Submits plain text from input to encryption service">'
-    html_content += "</form>"
-    html_content += "<footer>"
-    html_content += "<p>Author: Karel Jilcik</p>"
-    html_content += "</footer>"
-    html_content += "</body></html>"
+    try:
+        content_file = open("html/root_get.html", "r")
+        content = content_file.read()
+    except:
+        logging.info("Could not load source HTML file '%s'")
+        raise
 
-    return html_content
+    return content
 
 
 # Define respose to POST access to the service
@@ -210,7 +204,27 @@ def receive_data():
     for item in request.form.items():
         print(item)
 
-    return "Received data to be encrypted"
+    result = {}
+    # Get object from the Flask
+    data = request.get_data()
+
+    # Validate file
+    if data is not None and len(data) > 0:
+        logging.debug("Data to be encrypted: '%s'", data)
+
+        key_class = Encryption_key(password=env_vars['AES_KEY'])
+        encrypted_message = encrypt_message(key_class.get_key(), data)
+        logging.debug("Encrypted message: '%s'", encrypted_message)
+
+        encrypted_data = encrypted_message[0]
+        nonce = encrypted_message[1]
+
+        result = {}
+        result['encrypted'] = base64.b64encode(encrypted_data).decode('utf-8')
+        result['nonce'] = base64.b64encode(nonce).decode('utf-8')
+
+    logging.debug("Encryption result: %s", result)
+    return result
 
 
 # Define respose to GET access to the service
@@ -219,17 +233,14 @@ def get_request_file():
     """
     Method to implement REST API call of GET on address /file
     """
-    html_content = ""
-    html_content += "<html><body>"
-    html_content += "<h1>Encryption REST API service lives here</h1>"
-    html_content += "Upload your file here and let it encrypt<br>"
-    html_content += '<label for="file">File to be encrypted: </label>'
-    html_content += '<input type="file" id="file" name="file"><br><br>'
-    html_content += '<form action="" method="POST">'
-    html_content += '<input type="submit" value="Submit" title="Submits file">'
-    html_content += "</body></html>"
+    try:
+        content_file = open("html/file_get.html", "r")
+        content = content_file.read()
+    except:
+        logging.info("Could not load source HTML file '%s'")
+        raise
 
-    return html_content
+    return content
 
 
 # Define respose to POST access to the service - files
@@ -238,23 +249,26 @@ def receive_file():
     """
     Method to implement REST API call of PUT & POST on address /file
     """
-    file = request.get_data()
-    logging.debug("File to be encrypted: '%s'", file)
-
-    encrypted_message = None
-    key_class = Encryption_key(password=env_vars['AES_KEY'])
-    encrypted_message = encrypt_message(key_class.get_key(), file)
-    logging.debug("Encrypted message: '%s'", encrypted_message)
-
-    encrypted_text = encrypted_message[0]
-    nonce = encrypted_message[1]
-
     result = {}
-    result['encrypted'] = base64.b64encode(encrypted_text).decode('utf-8')
-    result['nonce'] = base64.b64encode(nonce).decode('utf-8')
+    # Get file object from the Flask
+    file = request.get_data()
 
-    print(result)
+    # Validate file
+    if file is not None and len(file) > 0:
+        logging.debug("File to be encrypted: '%s'", file)
 
+        key_class = Encryption_key(password=env_vars['AES_KEY'])
+        encrypted_message = encrypt_message(key_class.get_key(), file)
+        logging.debug("Encrypted message: '%s'", encrypted_message)
+
+        encrypted_data = encrypted_message[0]
+        nonce = encrypted_message[1]
+
+        result = {}
+        result['encrypted'] = base64.b64encode(encrypted_data).decode('utf-8')
+        result['nonce'] = base64.b64encode(nonce).decode('utf-8')
+
+    logging.debug("Encryption result: %s", result)
     return result
 
 
@@ -265,16 +279,20 @@ if __name__ == "__main__":
     # Capture signal from the outside
     signal.signal(signal.SIGTERM, terminate_by_signal)
 
-    # Load values from environmental variables
+    # Load values from environment variables
     env_vars = get_env()
+    print("Logging level is set to:", env_vars.get('VERBOSITY'))
 
-    PLAIN_TEXT = "My test string to be encrypted"
+    # Update logger configuration based on ENV variable value
+    logger.setLevel(env_vars.get('VERBOSITY', 'DEBUG'))
 
-    logging.debug("Envorinmental variable AES_KEY: '%s'", env_vars['AES_KEY'])
-    logging.debug("Text to be encrypted: '%s'", PLAIN_TEXT)
+
+    plain_text = "My test string to be encrypted"
+    logger.debug("Environment variable AES_KEY: '%s'", env_vars['AES_KEY'])
+    logger.debug("Text to be encrypted: '%s'", plain_text)
 
     key_class = Encryption_key(password=env_vars['AES_KEY'])
-    encrypted_text = encrypt_message(key_class.get_key(), PLAIN_TEXT)
+    encrypted_text = encrypt_message(key_class.get_key(), plain_text)
     logging.debug("Encrypted text: '%s'", encrypted_text)
 
     # Use Flash without SSL
