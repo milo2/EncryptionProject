@@ -14,6 +14,7 @@ import os.path
 import signal
 # For support JSON format
 import json
+import base64
 # For access to environmental variables
 from os import environ as env
 # For REST API
@@ -24,7 +25,6 @@ from cryptography.fernet import Fernet
 # For key generation from password
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import scrypt
-from Crypto.Protocol.KDF import PBKDF2
 
 
 app = Flask(__name__)
@@ -241,11 +241,21 @@ def receive_file():
     file = request.get_data()
     logging.debug("File to be encrypted: '%s'", file)
 
+    encrypted_message = None
     key_class = Encryption_key(password=env_vars['AES_KEY'])
-    encrypted_text = encrypt_message(key_class.get_key(), file)
-    logging.debug("Encrypted text: '%s'", encrypted_text)
+    encrypted_message = encrypt_message(key_class.get_key(), file)
+    logging.debug("Encrypted message: '%s'", encrypted_message)
 
-    return file + key_class.get_key()
+    encrypted_text = encrypted_message[0]
+    nonce = encrypted_message[1]
+
+    result = {}
+    result['encrypted'] = base64.b64encode(encrypted_text).decode('utf-8')
+    result['nonce'] = base64.b64encode(nonce).decode('utf-8')
+
+    print(result)
+
+    return result
 
 
 
