@@ -1,5 +1,5 @@
 # EncryptionProject
-C++ project to implement encryption functionality with REST API access
+Python project to implement encryption functionality with REST API access
 
 SYSTEM REQUIREMENTS:
 - Create microservice for Backend servers running on Linux
@@ -41,8 +41,8 @@ LOW LEVEL REQ:
 
 #USAGE
 Use web browser or user command line tool to access the service and push text to be encrypted.
-- Usage with uwsgi by command ```uwsgi --http-socket 127.0.0.1:5000 --mount /=service:app```
-- Usage as docker container by command ``````
+- Run locally by command ```pipenv run python service.py```
+- Run in docker by command ```docker run --rm -it -p 5000:5000 encryption_service```
 
 
 #PERFORMANCE TEST
@@ -50,10 +50,9 @@ Use web browser or user command line tool to access the service and push text to
 
 
 #BUILD AN APPLICATION
-- Docker image can be prepared by command ```sudo docker build . -t encryption-service:1.0.0```
+- Donwload application codes from GitLab repository by command ```git clone https://github.com/milo2/EncryptionProject.git .```
+- Prepare Docker image by command ```docker build . -t encryption_service```
 
-#RUN AN APPLICATION
-- To run docker image run command ```sudo docker run --rm -it -p 5000:5000 encryption-service:1.0.0```
 
 #TESTING
 ## Running tests

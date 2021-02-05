@@ -248,12 +248,12 @@ if __name__ == "__main__":
     logging.debug("Encrypted text: '%s'", encrypted_text)
 
     # Use Flash without SSL
-    app.run()
+    app.run(host="0.0.0.0")
 
     # Use Flask with adhoc certificate
-    #app.run(ssl_context='adhoc')
+    #app.run(host="0.0.0.0", ssl_context='adhoc')
 
     # To run Flask with self-signed SSL cert
-    #app.run(ssl_context=('cert/cert.pem', 'cert/key.pem'))
+    #app.run(host="0.0.0.0", ssl_context=('cert/cert.pem', 'cert/key.pem'))
 
     sys.exit()
