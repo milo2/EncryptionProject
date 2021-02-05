@@ -1,10 +1,30 @@
 <html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    .footer {
+       position: fixed;
+       left: 0;
+       bottom: 0;
+       width: 100%;
+       background-color: black;
+       color: white;
+       text-align: left;
+    }
+    </style>
+  </head>
+
   <body>
     <h1>Encryption REST API service lives here</h1>
-    Upload your file here and let it encrypt<br>
-    <label for="file">File to be encrypted: </label>
+    Upload your file here and let it encrypt<br><br>
+    <label for="file">File to be encrypted</label>
+    <br><br>
     <input type="file" id="file" name="file"><br><br>
     <form action="" method="POST" enctype="multipart/form-data">
     <input type="submit" value="Submit" title="Submits file to the server">
+
+    <div class="footer">
+      <p>Author: Milo2, None rights reserved 2021</p>
+    </div>
   </body>
 </html>
