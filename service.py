@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Demonstration program to run encryption service in Docker with REST API
+"""
+
 
 import sys
 # For logging handling
@@ -8,6 +12,10 @@ import logging
 import os.path
 # For intercommunication
 import signal
+# For support JSON format
+import json
+# For access to environmental variables
+from os import environ as env
 # For REST API
 from flask import Flask, request
 #
@@ -17,20 +25,14 @@ from cryptography.fernet import Fernet
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Protocol.KDF import PBKDF2
-# To convert data to file format
-#import io
-# For access to environmental variables
-from os import environ as env
-# For support JSON format
-import json
 
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
 IS_RUNNING = True
-NUM_OF_ENCRYPTION = 0
 
-logging.basicConfig(format='%(asctime)s   %(message)s', datefmt='%I:%M:%S %p', stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s   %(message)s', datefmt='%I:%M:%S %p', \
+    stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -56,12 +58,15 @@ def get_env():
         raise
 
 
-class ENCRYPTION_KEY:
+class Encryption_key:
     """
     Class to handle loading and generation of the encryption key
     """
 
     def __init__(self, password:str = None):
+        """
+        Class constructor
+        """
         self.key = None
 
         if self.key is None:
@@ -122,6 +127,8 @@ class ENCRYPTION_KEY:
         """
         Validate given key
         """
+        pass
+
         # Key could be validated here - minimum required bit length, etc.
         return 1
 
@@ -144,7 +151,6 @@ def encrypt_message(key, plain_text:bytearray=None, add:bytearray=None, nonce=No
     Encrypt data
     returns: (encrypted_text, nonce)
     """
-    NUM_OF_ENCRYPTION = +1
     logging.debug("plain_text is %s data type", type(plain_text))
 
     if type(plain_text) is str:
@@ -165,12 +171,18 @@ def encrypt_message(key, plain_text:bytearray=None, add:bytearray=None, nonce=No
     return encrypted_text, cipher.nonce
 
 
-def welcomeMsg():
+def welcome_msg():
+    """
+    Generate welcome message of the service
+    """
     print("Welcome to the microservice to encrypt data")
 
 # Define respose to GET access to the service
 @app.route("/", methods=["GET"])
 def get_request():
+    """
+    Method to implement REST API call of GET
+    """
     html_content = ""
     html_content += "<html><body>"
     html_content += "<h1>Encryption REST API service lives here</h1>"
@@ -178,11 +190,11 @@ def get_request():
     html_content += '<label for="plain">Plain text: </label>'
     html_content += '<input type="text" id="plain" name="plain"><br><br>'
     html_content += '<form method="POST" action="/" enctype="multipart-form-data">'
-    html_content += '<input type="submit" value="submit" title="Submits plain text from input to encryption service">'
+    html_content += '<input type="submit" value="submit" \
+        title="Submits plain text from input to encryption service">'
     html_content += "</form>"
     html_content += "<footer>"
     html_content += "<p>Author: Karel Jilcik</p>"
-    html_content += "<p>Totally " + repr(NUM_OF_ENCRYPTION) + " messages was already encrypted</p>"
     html_content += "</footer>"
     html_content += "</body></html>"
 
@@ -192,6 +204,9 @@ def get_request():
 # Define respose to POST access to the service
 @app.route("/", methods=['POST'])
 def receive_data():
+    """
+    Method to implement REST API call of POST
+    """
     for item in request.form.items():
         print(item)
 
@@ -201,6 +216,9 @@ def receive_data():
 # Define respose to GET access to the service
 @app.route("/file", methods=["GET"])
 def get_request_file():
+    """
+    Method to implement REST API call of GET on address /file
+    """
     html_content = ""
     html_content += "<html><body>"
     html_content += "<h1>Encryption REST API service lives here</h1>"
@@ -217,10 +235,13 @@ def get_request_file():
 # Define respose to POST access to the service - files
 @app.route("/file", methods=['POST', 'PUT'])
 def receive_file():
+    """
+    Method to implement REST API call of PUT & POST on address /file
+    """
     file = request.get_data()
     logging.debug("File to be encrypted: '%s'", file)
 
-    key_class = ENCRYPTION_KEY(password=env_vars['AES_KEY'])
+    key_class = Encryption_key(password=env_vars['AES_KEY'])
     encrypted_text = encrypt_message(key_class.get_key(), file)
     logging.debug("Encrypted text: '%s'", encrypted_text)
 
@@ -229,7 +250,7 @@ def receive_file():
 
 
 if __name__ == "__main__":
-    welcomeMsg()
+    welcome_msg()
 
     # Capture signal from the outside
     signal.signal(signal.SIGTERM, terminate_by_signal)
@@ -237,14 +258,13 @@ if __name__ == "__main__":
     # Load values from environmental variables
     env_vars = get_env()
 
-    plain_text = "My test string to be encrypted"
+    PLAIN_TEXT = "My test string to be encrypted"
 
     logging.debug("Envorinmental variable AES_KEY: '%s'", env_vars['AES_KEY'])
-    logging.debug("Text to be encrypted: '%s'", plain_text)
+    logging.debug("Text to be encrypted: '%s'", PLAIN_TEXT)
 
-    key_class = None
-    key_class = ENCRYPTION_KEY(password=env_vars['AES_KEY'])
-    encrypted_text = encrypt_message(key_class.get_key(), plain_text)
+    key_class = Encryption_key(password=env_vars['AES_KEY'])
+    encrypted_text = encrypt_message(key_class.get_key(), PLAIN_TEXT)
     logging.debug("Encrypted text: '%s'", encrypted_text)
 
     # Use Flash without SSL

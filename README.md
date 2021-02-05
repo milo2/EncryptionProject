@@ -65,7 +65,7 @@ pipenv run pytest tests/unit -vv
 ## Running linter
 ```bash
 pipenv install --dev
-pipenv run pylint -f colorized **/*.py
+pipenv run pylint -f colorized *.py
 ```
 
 
